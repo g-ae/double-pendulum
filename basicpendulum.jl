@@ -37,8 +37,8 @@ for i in 1:iterations
 end
 
 anim = @animate for i in 1:20:length(x)
-	Plots.plot(x[1:i], y[1:i])
+	Plots.plot(x[1:i], y[1:i], aspect_ratio = :equal)
     Plots.scatter!(x[i:i], y[i:i], xlims=(-6,6), ylims=(-6,6), marker=true, color=:red, legend=false)
 end
 
-gif(anim, "basic_pendulum.gif", fps = 30)
+gif(anim, "basicpendulum.gif", fps = 30)
