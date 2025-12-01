@@ -41,4 +41,4 @@ anim = @animate for i in 1:20:length(x)
     Plots.scatter!(x[i:i], y[i:i], xlims=(-6,6), ylims=(-6,6), marker=true, color=:red, legend=false)
 end
 
-gif(anim, "test.gif", fps = 30)
+gif(anim, "basic_pendulum.gif", fps = 30)
