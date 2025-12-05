@@ -1,13 +1,13 @@
 using Plots
 
 # Constants
-const l1 = 5.0
-const l2 = 4.0
-const m1 = 1.0
-const m2 = 1.0
+const l1 = 0.09174
+const l2 = 0.06933
+const m1 = 0.2
+const m2 = 0.1
 const g = 9.81
-const delta_t = 0.005
-const iterations = 20000
+const delta_t = 0.001
+const iterations = 4000
 
 # État du système : [theta1, theta2, theta1p, theta2p]
 # Passage dans fonctions facilité
@@ -48,10 +48,22 @@ y1 = Float64[]
 x2 = Float64[]
 y2 = Float64[]
 
+k = Float64[]
+p = Float64[]
+m = Float64[]
+
 println("Calcul en cours...")
 for i in 1:iterations
     global u
     
+    # Étape RK4
+    k1 = pendulum_dynamics(u)
+    k2 = pendulum_dynamics(u + delta_t*k1/2)
+    k3 = pendulum_dynamics(u + delta_t*k2/2)
+    k4 = pendulum_dynamics(u + delta_t*k3)
+    u += delta_t * (k1 + 2*k2 + 2*k3 + k4) / 6
+    
+    # Affichage
     theta1 = u[1]
     theta2 = u[2]
     
@@ -60,20 +72,15 @@ for i in 1:iterations
     push!(x2, x1[end] + l2 * sin(theta2))
     push!(y2, y1[end] - l2 * cos(theta2))
     
-    # Étape RK4
-    k1 = pendulum_dynamics(u)
-    k2 = pendulum_dynamics(u + delta_t*k1/2)
-    k3 = pendulum_dynamics(u + delta_t*k2/2)
-    k4 = pendulum_dynamics(u + delta_t*k3)
-    u += (delta_t/6) * (k1 + 2*k2 + 2*k3 + k4)
+    # Calcul énergie pour affichage
+    T = 0.5*m1*l1^2*u[3]^2+0.5*m2*(l1^2*u[3]^2+l2^2*u[4]^2+2*l1*l2*u[3]*u[4]*cos(theta1-theta2))
+    V = -(m1+m2)*g*l1*cos(theta1)-m2*g*l2*cos(theta2)
+    push!(k, T)
+    push!(p, V)
+    push!(m, T + V)
 end
 
-# --- ANIMATION (Inchangé ou presque) ---
-println("Génération de l'animation...")
-anim = @animate for i in 1:length(x1)
-    if i % 100 == 0
-        println("Progression: ", i, "/", length(x1))
-    end
+function plot_at(i::Int)
     Plots.plot(x2[1:i], y2[1:i], aspect_ratio = :equal, size=(600, 600), xlims=(-(l1+l2), (l1+l2)), ylims=(-(l1+l2), (l1+l2)), legend=false, axis=([], false))
                
     Plots.plot!([0, x1[i]], [0, y1[i]], color=:black, linewidth=2)
@@ -81,6 +88,26 @@ anim = @animate for i in 1:length(x1)
     
     Plots.scatter!([x1[i]], [y1[i]], color=:red, markersize=5)
     Plots.scatter!([x2[i]], [y2[i]], color=:red, markersize=5)
-end every 10
+end
 
-gif(anim, "double_pendulum-rk4.gif", fps = 50)
+# Animation
+println("Génération de l'animation...")
+anim = @animate for i in 1:length(x1)
+    if i % 100 == 0
+        println("Progression: ", i, "/", length(x1))
+    end
+    plot_at(i)
+end every 4
+
+gif(anim, "double_pendulum-rk4.gif", fps = 100)
+
+println("Génération de l'image des énergies...")
+Plots.plot(1:iterations, k, label="Ec", ylabel="Energie", xlabel="Iterations ($(round(delta_t * iterations))/s)")
+Plots.plot!(1:iterations, p, label="Ep")
+Plots.plot!(1:iterations, m, label="Em")
+
+savefig("cinetique.png")
+
+println("Énergie totale au point 1: ", m[1])
+println("Énergie totale à la fin: ", m[end])
+println("Équivaut à une perte de ", 100 - m[end] / m[1] * 100, " %")
