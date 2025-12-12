@@ -3,15 +3,23 @@ using Plots
 # Constants
 const l1 = 0.09174
 const l2 = 0.06933
-const m1 = 0.2
-const m2 = 0.1
+const m1 = 0.03
+const m2 = 0.002
 const g = 9.81
 const delta_t = 0.001
 const iterations = 4000
 
+const skip_animation = true
+
+# const m1 = 0.041
+# const m2 = 0.006
+
+# x=2.084 mm, y=91.66 mm
+
 # État du système : [theta1, theta2, theta1p, theta2p]
 # Passage dans fonctions facilité
-u = [pi, pi + 0.2, 0.0, 0.0]
+u = [pi + 0.02274, pi + 0.0951247, 0.0, 0.0]
+# u = [pi/2 *3, pi/2 * 3, 0.0, 0.0]
 
 # Cette fonction renvoie [d_theta1, d_theta2, d_theta1p, d_theta2p]
 function pendulum_dynamics(u)
@@ -91,15 +99,19 @@ function plot_at(i::Int)
 end
 
 # Animation
-println("Génération de l'animation...")
-anim = @animate for i in 1:length(x1)
-    if i % 100 == 0
-        println("Progression: ", i, "/", length(x1))
-    end
-    plot_at(i)
-end every 4
+if !skip_animation
+    println("Génération de l'animation...")
+    anim = @animate for i in 1:length(x1)
+        if i % 100 == 0
+            println("Progression: ", i, "/", length(x1))
+        end
+        plot_at(i)
+    end every 10
+    gif(anim, "double_pendulum-rk4.mp4", fps = 100)
+end
 
-gif(anim, "double_pendulum-rk4.gif", fps = 100)
+
+# Energies
 
 println("Génération de l'image des énergies...")
 Plots.plot(1:iterations, k, label="Ec", ylabel="Energie", xlabel="Iterations ($(round(delta_t * iterations))/s)")
@@ -111,3 +123,57 @@ savefig("cinetique.png")
 println("Énergie totale au point 1: ", m[1])
 println("Énergie totale à la fin: ", m[end])
 println("Équivaut à une perte de ", 100 - m[end] / m[1] * 100, " %")
+
+
+# nombre de frames -> 70 frames réelles
+using DataFrames, CSV
+const frame_finale = 60
+const VIDEO_DELTA_T = 0.01
+const CALC_DELTA = trunc(Int, VIDEO_DELTA_T / delta_t)
+const DIFF = 10*CALC_DELTA
+
+# Plot de position masse A
+dfa = DataFrame(CSV.File("mass_a.csv"))
+dfa_x_affichage = dfa.x[1:frame_finale]
+x1_affichage = x1[DIFF:CALC_DELTA:frame_finale*CALC_DELTA + DIFF-CALC_DELTA]
+
+# X
+Plots.plot(1:frame_finale, x1_affichage, label="Calculated", xlabel="frame", ylabel="position X")
+Plots.plot!(1:frame_finale, dfa_x_affichage, label="Tracked A")
+
+# Diff X
+erreur_a_x = []
+
+for (i, val) in enumerate(x1_affichage)
+    push!(erreur_a_x, abs(val - dfa_x_affichage[i]))
+end
+
+Plots.plot!(1:frame_finale, erreur_a_x, label="Erreur", color=:red)
+savefig("masse_a_x.png")
+
+# Y
+y1_affichage = y1[DIFF:CALC_DELTA:frame_finale*CALC_DELTA + DIFF-CALC_DELTA]
+dfa_y_affichage = dfa.y[1:frame_finale]
+
+Plots.plot(1:frame_finale, y1_affichage, label="Calculated", xlabel="frame", ylabel="position Y")
+Plots.plot!(1:frame_finale, dfa_y_affichage, label="Tracked A")
+
+# Diff Y
+erreur_a_y = []
+
+for (i, val) in enumerate(y1_affichage)
+    push!(erreur_a_y, abs(val - dfa_y_affichage[i]))
+end
+Plots.plot!(1:frame_finale, erreur_a_y, label="Erreur", color=:red)
+savefig("masse_a_y.png")
+
+# Plot de position masse B
+dfb = DataFrame(CSV.File("mass_b.csv"))
+
+Plots.plot(1:frame_finale, x2[DIFF:CALC_DELTA:frame_finale*CALC_DELTA + DIFF-CALC_DELTA], label="Calculated", xlabel="frame", ylabel="position X")
+Plots.plot!(1:frame_finale, dfb.x[1:frame_finale], label="Tracked B")
+savefig("masse_b_x.png")
+
+Plots.plot(1:frame_finale, y2[DIFF:CALC_DELTA:frame_finale*CALC_DELTA + DIFF-CALC_DELTA], label="Calculated", xlabel="frame", ylabel="position Y")
+Plots.plot!(1:frame_finale, dfb.y[1:frame_finale], label="Tracked B")
+savefig("masse_b_y.png")

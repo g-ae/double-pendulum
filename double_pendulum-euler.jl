@@ -6,8 +6,8 @@ const l2 = 4
 const m1 = 1
 const m2 = 1
 const g = 9.81
-const delta_t = 0.005
-const iterations = 20000
+const delta_t = 0.01
+const iterations = 2000
 
 # Base values
 theta1 = pi
@@ -84,6 +84,6 @@ anim = @animate for i in 1:length(x1)
     
     Plots.scatter!(x1[i:i], y1[i:i], marker=true, color=:red, markersize=5)
     Plots.scatter!(x2[i:i], y2[i:i], marker=true, color=:red, markersize=5)
-end every 10
+end every 5
 
-gif(anim, "double_pendulum-euler.gif", fps = 50)
+gif(anim, "double_pendulum-euler.mp4", fps = 100)
