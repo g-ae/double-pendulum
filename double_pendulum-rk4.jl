@@ -1,10 +1,10 @@
-using Plots
+using Plots, Statistics, LinearAlgebra
 
 # Constants
 const l1 = 0.09174
 const l2 = 0.06933
-const m1 = 0.03
-const m2 = 0.002
+const m1 = 0.020283
+const m2 = 0.002083
 const g = 9.81
 const delta_t = 0.001
 const iterations = 4000
@@ -112,68 +112,86 @@ end
 
 
 # Energies
+function calc_energie()
+    println("Génération de l'image des énergies...")
+    Plots.plot(1:iterations, k, label="Ec", ylabel="Energie", xlabel="Iterations ($(round(delta_t * iterations))/frame)")
+    Plots.plot!(1:iterations, p, label="Ep")
+    Plots.plot!(1:iterations, m, label="Em")
+    
+    savefig("cinetique.png")
+    
+    println("Énergie totale au point 1: ", m[1])
+    println("Énergie totale à la fin: ", m[end])
+    println("Équivaut à une perte de ", 100 - m[end] / m[1] * 100, " %")
+end
 
-println("Génération de l'image des énergies...")
-Plots.plot(1:iterations, k, label="Ec", ylabel="Energie", xlabel="Iterations ($(round(delta_t * iterations))/s)")
-Plots.plot!(1:iterations, p, label="Ep")
-Plots.plot!(1:iterations, m, label="Em")
-
-savefig("cinetique.png")
-
-println("Énergie totale au point 1: ", m[1])
-println("Énergie totale à la fin: ", m[end])
-println("Équivaut à une perte de ", 100 - m[end] / m[1] * 100, " %")
-
+# Two arrays of same length
+function RMSE(arrVect1, arrVect2)
+    if length(arrVect1) != length(arrVect2)
+        throw("error, not same length")
+    end
+    return sqrt(mean(norm.(arrVect1 .- arrVect2).^2))
+end
 
 # nombre de frames -> 70 frames réelles
 using DataFrames, CSV
-const frame_finale = 60
+const frame_finale = 70
 const VIDEO_DELTA_T = 0.01
 const CALC_DELTA = trunc(Int, VIDEO_DELTA_T / delta_t)
 const DIFF = 10*CALC_DELTA
 
-# Plot de position masse A
+# Import CSV tracked positions
 dfa = DataFrame(CSV.File("mass_a.csv"))
-dfa_x_affichage = dfa.x[1:frame_finale]
-x1_affichage = x1[DIFF:CALC_DELTA:frame_finale*CALC_DELTA + DIFF-CALC_DELTA]
-
-# X
-Plots.plot(1:frame_finale, x1_affichage, label="Calculated", xlabel="frame", ylabel="position X")
-Plots.plot!(1:frame_finale, dfa_x_affichage, label="Tracked A")
-
-# Diff X
-erreur_a_x = []
-
-for (i, val) in enumerate(x1_affichage)
-    push!(erreur_a_x, abs(val - dfa_x_affichage[i]))
-end
-
-Plots.plot!(1:frame_finale, erreur_a_x, label="Erreur", color=:red)
-savefig("masse_a_x.png")
-
-# Y
-y1_affichage = y1[DIFF:CALC_DELTA:frame_finale*CALC_DELTA + DIFF-CALC_DELTA]
-dfa_y_affichage = dfa.y[1:frame_finale]
-
-Plots.plot(1:frame_finale, y1_affichage, label="Calculated", xlabel="frame", ylabel="position Y")
-Plots.plot!(1:frame_finale, dfa_y_affichage, label="Tracked A")
-
-# Diff Y
-erreur_a_y = []
-
-for (i, val) in enumerate(y1_affichage)
-    push!(erreur_a_y, abs(val - dfa_y_affichage[i]))
-end
-Plots.plot!(1:frame_finale, erreur_a_y, label="Erreur", color=:red)
-savefig("masse_a_y.png")
-
-# Plot de position masse B
 dfb = DataFrame(CSV.File("mass_b.csv"))
 
-Plots.plot(1:frame_finale, x2[DIFF:CALC_DELTA:frame_finale*CALC_DELTA + DIFF-CALC_DELTA], label="Calculated", xlabel="frame", ylabel="position X")
-Plots.plot!(1:frame_finale, dfb.x[1:frame_finale], label="Tracked B")
-savefig("masse_b_x.png")
+# Arrays de positions préparées
+x1_affichage = x1[DIFF:CALC_DELTA:frame_finale*CALC_DELTA + DIFF-CALC_DELTA]
+y1_affichage = y1[DIFF:CALC_DELTA:frame_finale*CALC_DELTA + DIFF-CALC_DELTA]
 
-Plots.plot(1:frame_finale, y2[DIFF:CALC_DELTA:frame_finale*CALC_DELTA + DIFF-CALC_DELTA], label="Calculated", xlabel="frame", ylabel="position Y")
-Plots.plot!(1:frame_finale, dfb.y[1:frame_finale], label="Tracked B")
-savefig("masse_b_y.png")
+# Changer ce bool si on veut/pas les graphiques des positions
+if true
+    # Preparation des deux
+    dfa_x_affichage = dfa.x[1:frame_finale]
+    dfa_y_affichage = dfa.y[1:frame_finale]
+
+    # X
+    Plots.plot(1:frame_finale, x1_affichage, label="Calculated", xlabel="frame", ylabel="position X", title="MASSE A, m1: $m1, m2: $m2")
+    Plots.plot!(1:frame_finale, dfa_x_affichage, label="Tracked A")
+
+    savefig("masse_a_x.png")
+
+    # Y
+
+    Plots.plot(1:frame_finale, y1_affichage, label="Calculated", xlabel="frame", ylabel="position Y", title="MASSE A, m1: $m1, m2: $m2")
+    Plots.plot!(1:frame_finale, dfa_y_affichage, label="Tracked A")
+
+    savefig("masse_a_y.png")
+
+    # Plot de position masse B
+
+    Plots.plot(1:frame_finale, x2[DIFF:CALC_DELTA:frame_finale*CALC_DELTA + DIFF-CALC_DELTA], label="Calculated", xlabel="frame", ylabel="position X", title="MASSE B, m1: $m1, m2: $m2")
+    Plots.plot!(1:frame_finale, dfb.x[1:frame_finale], label="Tracked B")
+    savefig("masse_b_x.png")
+
+    Plots.plot(1:frame_finale, y2[DIFF:CALC_DELTA:frame_finale*CALC_DELTA + DIFF-CALC_DELTA], label="Calculated", xlabel="frame", ylabel="position Y", title="MASSE B, m1: $m1, m2: $m2")
+    Plots.plot!(1:frame_finale, dfb.y[1:frame_finale], label="Tracked B")
+    savefig("masse_b_y.png")
+end
+# Masse A
+# XY
+traj_calc_a = [[x,y] for (x,y) in zip(x1_affichage, y1_affichage)]
+traj_track_a = [[x, y] for (x, y) in zip(dfa.x[1:frame_finale], dfa.y[1:frame_finale])]
+rmse_a = RMSE(traj_calc_a, traj_track_a)
+println("RMSE masse A ($m1) : ", rmse_a)
+
+# Masse B
+x2_affichage = x2[DIFF:CALC_DELTA:frame_finale*CALC_DELTA + DIFF-CALC_DELTA]
+y2_affichage = y2[DIFF:CALC_DELTA:frame_finale*CALC_DELTA + DIFF-CALC_DELTA]
+
+traj_calc_b = [[x,y] for (x,y) in zip(x2_affichage, y2_affichage)]
+traj_track_b = [[x, y] for (x, y) in zip(dfb.x[1:frame_finale], dfb.y[1:frame_finale])]
+rmse_b = RMSE(traj_calc_b, traj_track_b)
+println("RMSE masse B ($m2) : ", rmse_b)
+
+# Total
+println("RMSE Total (A + B) : ", rmse_a + rmse_b)
