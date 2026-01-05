@@ -1,4 +1,4 @@
-using DataFrames, CSV, LinearAlgebra, Statistics, Optim
+using DataFrames, CSV, LinearAlgebra, Statistics, Optim, LineSearches
 
 # Constantes
 const l1 = 0.09174
@@ -8,13 +8,13 @@ const delta_t = 0.001
 const iterations = 4000
 
 # Paramètres vidéo
-const frame_finale = 70
+dfa = DataFrame(CSV.File("mass_a2_200.csv"))
+dfb = DataFrame(CSV.File("mass_b2_200.csv"))
+
+const frame_finale = length(dfa.x)
 const VIDEO_DELTA_T = 0.01
 const CALC_DELTA = trunc(Int, VIDEO_DELTA_T / delta_t)
 const DIFF = 10 * CALC_DELTA
-
-dfa = DataFrame(CSV.File("mass_a.csv"))
-dfb = DataFrame(CSV.File("mass_b.csv"))
 
 #region Fonctions
 function RMSE(arrVect1, arrVect2)
@@ -52,7 +52,6 @@ end
 
 function cost_function(params)
     # params contient [m1, m2, theta1_debut, theta2_debut]
-    # println("testing avec paramètres: ", params)
     m1, m2, theta1_init, theta2_init = params
     
     u = [theta1_init, theta2_init, 0.0, 0.0]
@@ -88,6 +87,7 @@ function cost_function(params)
     rmse_b = RMSE(calc_b, track_b)
     
     # retourne valeur qui doit être minimisée = RMSE TOTAL
+    println(params, ", ", rmse_a + rmse_b)
     return rmse_a + rmse_b
 end
 #endregion
@@ -95,14 +95,16 @@ end
 #region Optimisation
 
 # [m1, m2, theta1_init, theta2_init]
-initial_guess = [0.028, 0.0022, pi + 0.0227, pi + 0.0951]
+# initial_guess = [0.028, 0.0022, pi + 0.0227, pi + 0.0951]
+# initial_guess = [0.027595227654726145, 0.0023031004617999383,] # ~0.06
+initial_guess = [0.0645353856224722, 0.006570939257122095, pi + 0.0227, pi + 0.0951]
 
-# m1 entre 10g et 50g, m2 entre 0.1g et 6g, angles proches de pi
-lower = [0.01, 0.0001, pi, pi]
-upper = [0.05, 0.0060, pi + 0.2, pi + 0.2]
+# m1 entre 5g et 50g, m2 entre 0.1g et 6g, angles proches de pi
+lower = [0.005, 0.0001, pi - 0.5, pi - 0.5]
+upper = [0.1, 0.03, pi + 0.5, pi + 0.5]
 
 println("Optimisation en cours (gradient descent)...")
-result = optimize(cost_function, lower, upper, initial_guess, Fminbox(GradientDescent()))
+result = optimize(cost_function, lower, upper, initial_guess, Fminbox(GradientDescent()), Optim.Options(iterations = 1000))
 
 # Résultats
 best = Optim.minimizer(result)

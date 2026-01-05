@@ -5,11 +5,13 @@ const l1 = 0.09174
 const l2 = 0.06933
 const m1 = 0.020283
 const m2 = 0.002083
+# const m1 = 0.06453
+# const m2 = 0.00657
 const g = 9.81
 const delta_t = 0.001
 const iterations = 4000
 
-const skip_animation = true
+const skip_animation = false
 
 # const m1 = 0.041
 # const m2 = 0.006
@@ -88,29 +90,6 @@ for i in 1:iterations
     push!(m, T + V)
 end
 
-function plot_at(i::Int)
-    Plots.plot(x2[1:i], y2[1:i], aspect_ratio = :equal, size=(600, 600), xlims=(-(l1+l2), (l1+l2)), ylims=(-(l1+l2), (l1+l2)), legend=false, axis=([], false))
-               
-    Plots.plot!([0, x1[i]], [0, y1[i]], color=:black, linewidth=2)
-    Plots.plot!([x1[i], x2[i]], [y1[i], y2[i]], color=:black, linewidth=2)
-    
-    Plots.scatter!([x1[i]], [y1[i]], color=:red, markersize=5)
-    Plots.scatter!([x2[i]], [y2[i]], color=:red, markersize=5)
-end
-
-# Animation
-if !skip_animation
-    println("Génération de l'animation...")
-    anim = @animate for i in 1:length(x1)
-        if i % 100 == 0
-            println("Progression: ", i, "/", length(x1))
-        end
-        plot_at(i)
-    end every 10
-    gif(anim, "double_pendulum-rk4.mp4", fps = 100)
-end
-
-
 # Energies
 function calc_energie()
     println("Génération de l'image des énergies...")
@@ -133,20 +112,58 @@ function RMSE(arrVect1, arrVect2)
     return sqrt(mean(norm.(arrVect1 .- arrVect2).^2))
 end
 
-# nombre de frames -> 70 frames réelles
+# Import CSV tracked positions
 using DataFrames, CSV
-const frame_finale = 70
+dfa = DataFrame(CSV.File("mass_a2_200.csv"))
+dfb = DataFrame(CSV.File("mass_b2_200.csv"))
+
+# nombre de frames -> 70 frames réelles
+const frame_finale = length(dfa.x)
 const VIDEO_DELTA_T = 0.01
 const CALC_DELTA = trunc(Int, VIDEO_DELTA_T / delta_t)
 const DIFF = 10*CALC_DELTA
 
-# Import CSV tracked positions
-dfa = DataFrame(CSV.File("mass_a.csv"))
-dfb = DataFrame(CSV.File("mass_b.csv"))
-
 # Arrays de positions préparées
 x1_affichage = x1[DIFF:CALC_DELTA:frame_finale*CALC_DELTA + DIFF-CALC_DELTA]
 y1_affichage = y1[DIFF:CALC_DELTA:frame_finale*CALC_DELTA + DIFF-CALC_DELTA]
+
+# Animation
+function plot_at(i::Int)
+    Plots.plot(x2[1:i], y2[1:i], aspect_ratio = :equal, size=(600, 600), xlims=(-(l1+l2), (l1+l2)), ylims=(-(l1+l2), (l1+l2)), legend=false, axis=([], false))
+               
+    Plots.plot!([0, x1[i]], [0, y1[i]], color=:black, linewidth=2)
+    Plots.plot!([x1[i], x2[i]], [y1[i], y2[i]], color=:black, linewidth=2)
+
+    Plots.scatter!([x1[i]], [y1[i]], color=:red, markersize=5)
+    Plots.scatter!([x2[i]], [y2[i]], color=:red, markersize=5)
+
+    # La vidéo commence à i = DIFF
+    if i >= DIFF
+        ir = div(i - DIFF, CALC_DELTA) + 1
+        
+        # On ne dépasse pas la taille du fichier (frame_finale)
+        ir_max = clamp(ir, 1, frame_finale)
+        
+        # On affiche tout l'historique jusqu'à l'instant t
+        Plots.plot!(dfa.x[1:ir_max], dfa.y[1:ir_max], color=:green, linewidth=2, label="Tracked A", alpha = 0.9)
+        Plots.plot!(dfb.x[1:ir_max], dfb.y[1:ir_max], color=:blue, linewidth=2, label="Tracked B", alpha = 0.9)
+        
+        if ir < frame_finale
+            Plots.scatter!(dfa.x[ir_max:ir_max], dfa.y[ir_max:ir_max], color=:green, markersize=3, alpha= 0.9)
+            Plots.scatter!(dfb.x[ir_max:ir_max], dfb.y[ir_max:ir_max], color=:blue, markersize=3, alpha = 0.9)
+        end
+    end
+end
+if !skip_animation
+    println("Génération de l'animation...")
+    anim = @animate for i in 1:length(x1)
+        if i % 100 == 0
+            println("Progression: ", i, "/", length(x1))
+        end
+        plot_at(i)
+    end every 10
+    gif(anim, "double_pendulum-rk4.mp4", fps = 100)
+end
 
 # Changer ce bool si on veut/pas les graphiques des positions
 if true
