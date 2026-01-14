@@ -3,24 +3,29 @@ using Plots, Statistics, LinearAlgebra
 # Constants
 const l1 = 0.09174
 const l2 = 0.06933
-const m1 = 0.020283
-const m2 = 0.002083
-# const m1 = 0.06453
-# const m2 = 0.00657
+# const m1 = 0.020283
+# const m2 = 0.002083
 const g = 9.81
 const delta_t = 0.001
 const iterations = 4000
 
 const skip_animation = false
 
-# const m1 = 0.041
-# const m2 = 0.006
-
 # x=2.084 mm, y=91.66 mm
 
 # État du système : [theta1, theta2, theta1p, theta2p]
 # Passage dans fonctions facilité
-u = [pi + 0.02274, pi + 0.0951247, 0.0, 0.0]
+# première valeur trouvée RMSE 0.205
+# const m1 = 0.026787070112305692
+# const m2 = 0.0025517657337978564
+# u = [3.1644756363258306, 3.239755159875963, -0.0001723913296354034, 0.00025022794075953944]
+
+# deuxieme valeur avec optim lgbfs
+const m1 = 0.0306
+const m2 = 0.003592
+u = [3.0897737491152792, 3.350640857834156, 1.0926444261134107, 0.08282205090971372]
+
+# u = [pi + 0.02274, pi + 0.0951247, 0.0, 0.0]
 # u = [pi/2 *3, pi/2 * 3, 0.0, 0.0]
 
 # Cette fonction renvoie [d_theta1, d_theta2, d_theta1p, d_theta2p]
@@ -114,18 +119,17 @@ end
 
 # Import CSV tracked positions
 using DataFrames, CSV
-dfa = DataFrame(CSV.File("mass_a2_200.csv"))
-dfb = DataFrame(CSV.File("mass_b2_200.csv"))
+dfa = DataFrame(CSV.File("mass_a_200.csv"))
+dfb = DataFrame(CSV.File("mass_b_200.csv"))
 
 # nombre de frames -> 70 frames réelles
 const frame_finale = length(dfa.x)
 const VIDEO_DELTA_T = 0.01
 const CALC_DELTA = trunc(Int, VIDEO_DELTA_T / delta_t)
-const DIFF = 10*CALC_DELTA
 
 # Arrays de positions préparées
-x1_affichage = x1[DIFF:CALC_DELTA:frame_finale*CALC_DELTA + DIFF-CALC_DELTA]
-y1_affichage = y1[DIFF:CALC_DELTA:frame_finale*CALC_DELTA + DIFF-CALC_DELTA]
+x1_affichage = x1[1:CALC_DELTA:frame_finale*CALC_DELTA]
+y1_affichage = y1[1:CALC_DELTA:frame_finale*CALC_DELTA]
 
 # Animation
 function plot_at(i::Int)
@@ -137,21 +141,18 @@ function plot_at(i::Int)
     Plots.scatter!([x1[i]], [y1[i]], color=:red, markersize=5)
     Plots.scatter!([x2[i]], [y2[i]], color=:red, markersize=5)
 
-    # La vidéo commence à i = DIFF
-    if i >= DIFF
-        ir = div(i - DIFF, CALC_DELTA) + 1
-        
-        # On ne dépasse pas la taille du fichier (frame_finale)
-        ir_max = clamp(ir, 1, frame_finale)
-        
-        # On affiche tout l'historique jusqu'à l'instant t
-        Plots.plot!(dfa.x[1:ir_max], dfa.y[1:ir_max], color=:green, linewidth=2, label="Tracked A", alpha = 0.9)
-        Plots.plot!(dfb.x[1:ir_max], dfb.y[1:ir_max], color=:blue, linewidth=2, label="Tracked B", alpha = 0.9)
-        
-        if ir < frame_finale
-            Plots.scatter!(dfa.x[ir_max:ir_max], dfa.y[ir_max:ir_max], color=:green, markersize=3, alpha= 0.9)
-            Plots.scatter!(dfb.x[ir_max:ir_max], dfb.y[ir_max:ir_max], color=:blue, markersize=3, alpha = 0.9)
-        end
+    ir = div(i, CALC_DELTA) + 1
+    
+    # On ne dépasse pas la taille du fichier (frame_finale)
+    ir_max = clamp(ir, 1, frame_finale)
+    
+    # On affiche tout l'historique jusqu'à l'instant t
+    Plots.plot!(dfa.x[1:ir_max], dfa.y[1:ir_max], color=:green, linewidth=2, label="Tracked A", alpha = 0.9)
+    Plots.plot!(dfb.x[1:ir_max], dfb.y[1:ir_max], color=:blue, linewidth=2, label="Tracked B", alpha = 0.9)
+    
+    if ir < frame_finale
+        Plots.scatter!(dfa.x[ir_max:ir_max], dfa.y[ir_max:ir_max], color=:green, markersize=3, alpha= 0.9)
+        Plots.scatter!(dfb.x[ir_max:ir_max], dfb.y[ir_max:ir_max], color=:blue, markersize=3, alpha = 0.9)
     end
 end
 if !skip_animation
@@ -172,25 +173,25 @@ if true
     dfa_y_affichage = dfa.y[1:frame_finale]
 
     # X
-    Plots.plot(1:frame_finale, x1_affichage, label="Calculated", xlabel="frame", ylabel="position X", title="MASSE A, m1: $m1, m2: $m2")
+    Plots.plot(1:frame_finale, x1_affichage, label="Calculated", xlabel="frame", ylabel="position X", title="MASSE A, m1: $m1 kg, m2: $m2 kg")
     Plots.plot!(1:frame_finale, dfa_x_affichage, label="Tracked A")
 
     savefig("masse_a_x.png")
 
     # Y
 
-    Plots.plot(1:frame_finale, y1_affichage, label="Calculated", xlabel="frame", ylabel="position Y", title="MASSE A, m1: $m1, m2: $m2")
+    Plots.plot(1:frame_finale, y1_affichage, label="Calculated", xlabel="frame", ylabel="position Y", title="MASSE A, m1: $m1 kg, m2: $m2 kg")
     Plots.plot!(1:frame_finale, dfa_y_affichage, label="Tracked A")
 
     savefig("masse_a_y.png")
 
     # Plot de position masse B
 
-    Plots.plot(1:frame_finale, x2[DIFF:CALC_DELTA:frame_finale*CALC_DELTA + DIFF-CALC_DELTA], label="Calculated", xlabel="frame", ylabel="position X", title="MASSE B, m1: $m1, m2: $m2")
+    Plots.plot(1:frame_finale, x2[1:CALC_DELTA:frame_finale*CALC_DELTA + 1 - CALC_DELTA], label="Calculated", xlabel="frame", ylabel="position X", title="MASSE B, m1: $m1 kg, m2: $m2 kg")
     Plots.plot!(1:frame_finale, dfb.x[1:frame_finale], label="Tracked B")
     savefig("masse_b_x.png")
 
-    Plots.plot(1:frame_finale, y2[DIFF:CALC_DELTA:frame_finale*CALC_DELTA + DIFF-CALC_DELTA], label="Calculated", xlabel="frame", ylabel="position Y", title="MASSE B, m1: $m1, m2: $m2")
+    Plots.plot(1:frame_finale, y2[1:CALC_DELTA:frame_finale*CALC_DELTA + 1 - CALC_DELTA], label="Calculated", xlabel="frame", ylabel="position Y", title="MASSE B, m1: $m1 kg, m2: $m2 kg")
     Plots.plot!(1:frame_finale, dfb.y[1:frame_finale], label="Tracked B")
     savefig("masse_b_y.png")
 end
@@ -202,8 +203,8 @@ rmse_a = RMSE(traj_calc_a, traj_track_a)
 println("RMSE masse A ($m1) : ", rmse_a)
 
 # Masse B
-x2_affichage = x2[DIFF:CALC_DELTA:frame_finale*CALC_DELTA + DIFF-CALC_DELTA]
-y2_affichage = y2[DIFF:CALC_DELTA:frame_finale*CALC_DELTA + DIFF-CALC_DELTA]
+x2_affichage = x2[1:CALC_DELTA:frame_finale*CALC_DELTA]
+y2_affichage = y2[1:CALC_DELTA:frame_finale*CALC_DELTA]
 
 traj_calc_b = [[x,y] for (x,y) in zip(x2_affichage, y2_affichage)]
 traj_track_b = [[x, y] for (x, y) in zip(dfb.x[1:frame_finale], dfb.y[1:frame_finale])]
