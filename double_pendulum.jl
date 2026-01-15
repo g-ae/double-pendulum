@@ -116,10 +116,10 @@ function save_mp4(position_data)
     gif(anim, "double_pendulum.mp4", fps = 100)
 end
 
-function save_images(position_data, starting_u)
+function save_position_images(position_data, starting_u)
     x1,y1,x2,y2 = position_data
 
-    println("Sauvegarde des images...")
+    println("Sauvegarde des images de position...")
 
     frame_finale = length(dfa.x)
     VIDEO_DELTA_T = 0.01
@@ -160,5 +160,5 @@ function load_double_pendulum_mp4(masse1, masse2, t1, t2, t1p, t2p)
     global u = [t1,t2,t1p,t2p]
     pos_data = rk4()[1]
     save_mp4(pos_data)
-    save_images(pos_data, starting_u)
+    save_position_images(pos_data, starting_u)
 end
