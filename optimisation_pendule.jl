@@ -5,11 +5,11 @@ const l1 = 0.09174
 const l2 = 0.06933
 const g = 9.81
 const delta_t = 0.001
-const iterations = 4000
+const iterations = 2000
 
 # Paramètres vidéo
-dfa = DataFrame(CSV.File("mass_a2_200.csv"))
-dfb = DataFrame(CSV.File("mass_b2_200.csv"))
+dfa = DataFrame(CSV.File("mass_a_200.csv"))
+dfb = DataFrame(CSV.File("mass_b_200.csv"))
 
 const frame_finale = length(dfa.x)
 const VIDEO_DELTA_T = 0.01
@@ -18,9 +18,6 @@ const DIFF = 10 * CALC_DELTA
 
 #region Fonctions
 function RMSE(arrVect1, arrVect2)
-    if length(arrVect1) != length(arrVect2)
-        throw("error, not same length")
-    end
     return sqrt(mean(norm.(arrVect1 .- arrVect2).^2))
 end
 
@@ -40,79 +37,77 @@ function pendulum_dynamics(u, m1, m2)
     M21 = l1 * cos(delta)
     M22 = l2
     R2  = l1 * theta1p^2 * sin(delta) - g * sin(theta2)
+
+    # Cramer -> https://fr.wikipedia.org/wiki/R%C3%A8gle_de_Cramer  (éviter de créer trop de tableaux)
+    det = M11 * M22 - M12 * M21
+    acc1 = (M22 * R1 - M12 * R2) / det
+    acc2 = (-M21 * R1 + M11 * R2) / det
     
-    Matrice = [M11 M12; M21 M22]
-    Resultats = [R1, R2]
-    
-    accels = Matrice \ Resultats 
-    return [theta1p, theta2p, accels[1], accels[2]]
+    return [theta1p, theta2p, acc1, acc2]
 end
 
 # Fonction de Coût pour l'optimiseur
 
 function cost_function(params)
-    # params contient [m1, m2, theta1_debut, theta2_debut]
-    m1, m2, theta1_init, theta2_init = params
+    # params contient [m1, m2, theta1_debut, theta2_debut, theta1p_debut, theta2p_debut]
+    m1, m2, theta1_init, theta2_init, theta1p_init, theta2p_init = params
     
-    u = [theta1_init, theta2_init, 0.0, 0.0]
+    u = [theta1_init, theta2_init, theta1p_init, theta2p_init]
     
-    x1 = Float64[]
-    y1 = Float64[]
-    x2 = Float64[]
-    y2 = Float64[]
+    sum_sq_err_a = 0.0
+    sum_sq_err_b = 0.0
+    track_idx = 1
 
     # Simulation RK4
     for i in 1:iterations
+
+        if (i - 1) % CALC_DELTA == 0
+            t1, t2 = u[1], u[2]
+
+            x1_val = l1 * sin(t1)
+            y1_val = -l1 * cos(t1)
+            x2_val = x1_val + l2 * sin(t2)
+            y2_val = y1_val - l2 * cos(t2)
+
+            sum_sq_err_a += (x1_val - dfa.x[track_idx])^2 + (y1_val - dfa.y[track_idx])^2
+            sum_sq_err_b += (x2_val - dfb.x[track_idx])^2 + (y2_val - dfb.y[track_idx])^2
+
+            track_idx += 1
+        end
+
         k1 = pendulum_dynamics(u, m1, m2)
         k2 = pendulum_dynamics(u + delta_t*k1/2, m1, m2)
         k3 = pendulum_dynamics(u + delta_t*k2/2, m1, m2)
         k4 = pendulum_dynamics(u + delta_t*k3, m1, m2)
         u += delta_t * (k1 + 2*k2 + 2*k3 + k4) / 6
-        
-        theta1, theta2 = u[1], u[2]
-        push!(x1, l1 * sin(theta1))
-        push!(y1, -l1 * cos(theta1))
-        push!(x2, x1[end] + l2 * sin(theta2))
-        push!(y2, y1[end] - l2 * cos(theta2))
     end
-    
-    # RMSE masse A
-    calc_a = [[x1[i], y1[i]] for i in DIFF:CALC_DELTA:frame_finale*CALC_DELTA + DIFF-CALC_DELTA]
-    track_a = [[dfa.x[i], dfa.y[i]] for i in 1:frame_finale]
-    rmse_a = RMSE(calc_a, track_a)
-    
-    # RMSE masse B
-    calc_b = [[x2[i], y2[i]] for i in DIFF:CALC_DELTA:frame_finale*CALC_DELTA + DIFF-CALC_DELTA]
-    track_b = [[dfb.x[i], dfb.y[i]] for i in 1:frame_finale]
-    rmse_b = RMSE(calc_b, track_b)
-    
-    # retourne valeur qui doit être minimisée = RMSE TOTAL
-    println(params, ", ", rmse_a + rmse_b)
-    return rmse_a + rmse_b
+        
+    count = track_idx - 1
+    return sqrt(sum_sq_err_a / count) + sqrt(sum_sq_err_b / count)
 end
 #endregion
 
 #region Optimisation
 
-# [m1, m2, theta1_init, theta2_init]
-# initial_guess = [0.028, 0.0022, pi + 0.0227, pi + 0.0951]
-# initial_guess = [0.027595227654726145, 0.0023031004617999383,] # ~0.06
-initial_guess = [0.0645353856224722, 0.006570939257122095, pi + 0.0227, pi + 0.0951]
+# [m1, m2, theta1_init, theta2_init, theta1p, theta2p]
+initial_guess = [0.0306, 0.003592, 3.08977, 3.35064, 1.09264, 0.082822] # valeur trouvée avant avec petit rmse
+lower = [0.005, 0.0005, pi - 0.5, pi - 0.5, -1.5, -1.0]
+upper = [0.04, 0.01, pi + 0.5, pi + 0.5, 1.5, 1.0]
 
-# m1 entre 5g et 50g, m2 entre 0.1g et 6g, angles proches de pi
-lower = [0.005, 0.0001, pi - 0.5, pi - 0.5]
-upper = [0.1, 0.03, pi + 0.5, pi + 0.5]
+println("Optimisation (LBFGS)...")
 
-println("Optimisation en cours (gradient descent)...")
-result = optimize(cost_function, lower, upper, initial_guess, Fminbox(GradientDescent()), Optim.Options(iterations = 1000))
+result = optimize(cost_function, lower, upper, initial_guess, Fminbox(LBFGS()), 
+                  Optim.Options(show_trace=true, iterations=1000, show_every=5))
 
-# Résultats
 best = Optim.minimizer(result)
-println("\nFIN DE L'OPTIMISATION")
-println("m1: ", best[1])
-println("m2: ", best[2])
-println("theta1: ", best[3])
-println("theta2: ", best[4])
-println("RMSE minimal: ", Optim.minimum(result))
+
+println("\n--- RÉSULTATS ---")
+println("Masse 1: ", round(best[1], digits=5))
+println("Masse 2: ", round(best[2], digits=5))
+println("Theta 1: ", round(best[3], digits=5))
+println("Theta 2: ", round(best[4], digits=5))
+println("Theta 1p: ", round(best[5], digits=5))
+println("Theta 2p: ", round(best[6], digits=5))
+println("RMSE final: ", round(Optim.minimum(result), digits=5))
 
 #endregion
