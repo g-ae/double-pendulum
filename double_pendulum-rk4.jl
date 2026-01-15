@@ -1,32 +1,22 @@
 using Plots, Statistics, LinearAlgebra
 
-# Constants
+#region Constants
+
+# Lengths based on measured values in class x=2.084 mm, y=91.66 mm
 const l1 = 0.09174
 const l2 = 0.06933
-# const m1 = 0.020283
-# const m2 = 0.002083
+const m1 = 0.0306
+const m2 = 0.003592
 const g = 9.81
 const delta_t = 0.001
 const iterations = 4000
 
 const skip_animation = false
 
-# x=2.084 mm, y=91.66 mm
+#endregion
 
 # État du système : [theta1, theta2, theta1p, theta2p]
-# Passage dans fonctions facilité
-# première valeur trouvée RMSE 0.205
-# const m1 = 0.026787070112305692
-# const m2 = 0.0025517657337978564
-# u = [3.1644756363258306, 3.239755159875963, -0.0001723913296354034, 0.00025022794075953944]
-
-# deuxieme valeur avec optim lgbfs
-const m1 = 0.0306
-const m2 = 0.003592
-u = [3.0897737491152792, 3.350640857834156, 1.0926444261134107, 0.08282205090971372]
-
-# u = [pi + 0.02274, pi + 0.0951247, 0.0, 0.0]
-# u = [pi/2 *3, pi/2 * 3, 0.0, 0.0]
+u = [3.08977, 3.35064, 1.09264, 0.082822]   # par optim lgbfs
 
 # Cette fonction renvoie [d_theta1, d_theta2, d_theta1p, d_theta2p]
 function pendulum_dynamics(u)
@@ -147,7 +137,6 @@ function plot_at(i::Int)
     ir_max = clamp(ir, 1, frame_finale)
     
     # On affiche tout l'historique jusqu'à l'instant t
-    Plots.plot!(dfa.x[1:ir_max], dfa.y[1:ir_max], color=:green, linewidth=2, label="Tracked A", alpha = 0.9)
     Plots.plot!(dfb.x[1:ir_max], dfb.y[1:ir_max], color=:blue, linewidth=2, label="Tracked B", alpha = 0.9)
     
     if ir < frame_finale
@@ -172,13 +161,10 @@ if true
     dfa_x_affichage = dfa.x[1:frame_finale]
     dfa_y_affichage = dfa.y[1:frame_finale]
 
-    # X
+    # Plot de position masse A
     Plots.plot(1:frame_finale, x1_affichage, label="Calculated", xlabel="frame", ylabel="position X", title="MASSE A, m1: $m1 kg, m2: $m2 kg")
     Plots.plot!(1:frame_finale, dfa_x_affichage, label="Tracked A")
-
     savefig("masse_a_x.png")
-
-    # Y
 
     Plots.plot(1:frame_finale, y1_affichage, label="Calculated", xlabel="frame", ylabel="position Y", title="MASSE A, m1: $m1 kg, m2: $m2 kg")
     Plots.plot!(1:frame_finale, dfa_y_affichage, label="Tracked A")
@@ -186,7 +172,6 @@ if true
     savefig("masse_a_y.png")
 
     # Plot de position masse B
-
     Plots.plot(1:frame_finale, x2[1:CALC_DELTA:frame_finale*CALC_DELTA + 1 - CALC_DELTA], label="Calculated", xlabel="frame", ylabel="position X", title="MASSE B, m1: $m1 kg, m2: $m2 kg")
     Plots.plot!(1:frame_finale, dfb.x[1:frame_finale], label="Tracked B")
     savefig("masse_b_x.png")
@@ -195,6 +180,8 @@ if true
     Plots.plot!(1:frame_finale, dfb.y[1:frame_finale], label="Tracked B")
     savefig("masse_b_y.png")
 end
+
+# Calcul du RMSE
 # Masse A
 # XY
 traj_calc_a = [[x,y] for (x,y) in zip(x1_affichage, y1_affichage)]
