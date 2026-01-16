@@ -83,9 +83,11 @@ function save_mp4(position_data)
     VIDEO_DELTA_T = 0.01
     CALC_DELTA = trunc(Int, VIDEO_DELTA_T / delta_t)
 
+    HISTORY = 400
+
     # Animation
     function plot_at(i::Int)
-        Plots.plot(x2[1:i], y2[1:i], aspect_ratio = :equal, size=(600, 600), xlims=(-(l1+l2), (l1+l2)), ylims=(-(l1+l2), (l1+l2)), legend=false, axis=([], false))
+        Plots.plot(x2[max(1, i-HISTORY):i], y2[max(1, i-HISTORY):i], aspect_ratio = :equal, size=(600, 600), xlims=(-(l1+l2), (l1+l2)), ylims=(-(l1+l2), (l1+l2)), legend=false, axis=([], false))
                 
         Plots.plot!([0, x1[i]], [0, y1[i]], color=:black, linewidth=2)
         Plots.plot!([x1[i], x2[i]], [y1[i], y2[i]], color=:black, linewidth=2)
@@ -96,14 +98,16 @@ function save_mp4(position_data)
         ir = div(i, CALC_DELTA) + 1
         
         # On ne dépasse pas la taille du fichier (frame_finale)
-        ir_max = clamp(ir, 1, frame_finale)
-        
-        # On affiche tout l'historique jusqu'à l'instant t
-        Plots.plot!(dfb.x[1:ir_max], dfb.y[1:ir_max], color=:blue, linewidth=2, label="Tracked B", alpha = 0.9)
-        
-        if ir < frame_finale
-            Plots.scatter!(dfa.x[ir_max:ir_max], dfa.y[ir_max:ir_max], color=:green, markersize=3, alpha= 0.9)
-            Plots.scatter!(dfb.x[ir_max:ir_max], dfb.y[ir_max:ir_max], color=:blue, markersize=3, alpha = 0.9)
+        if ir <= frame_finale
+            ir_max = clamp(ir, 1, frame_finale)
+            
+            # On affiche tout l'historique jusqu'à l'instant t
+            Plots.plot!(dfb.x[trunc(Int,max(1, ir_max - HISTORY / CALC_DELTA)):ir_max], dfb.y[trunc(Int,max(1,ir_max - HISTORY / CALC_DELTA)):ir_max], color=:blue, linewidth=2, label="Tracked B", alpha = 0.9)
+            
+            if ir < frame_finale
+                Plots.scatter!(dfa.x[ir_max:ir_max], dfa.y[ir_max:ir_max], color=:green, markersize=3, alpha= 0.9)
+                Plots.scatter!(dfb.x[ir_max:ir_max], dfb.y[ir_max:ir_max], color=:blue, markersize=3, alpha = 0.9)
+            end
         end
     end
     println("Génération de l'animation...")
