@@ -58,9 +58,14 @@ end
 
 function cost_function(params)
     # params contient [m1, m2, theta1_debut, theta2_debut, theta1p_debut, theta2p_debut]
-    m1, m2, theta1_init, theta2_init, theta1p_init, theta2p_init = params
+    m1, m2, theta1p_init, theta2p_init = params
+
+    if m1 <= 0 || m2 <= 0 || theta1p_init <= 0 || theta2p_init <= 0
+        return Inf
+    end
     
-    u = (theta1_init, theta2_init, theta1p_init, theta2p_init)
+    # angles de base fixes
+    u = (3.1728, 3.225, theta1p_init, theta2p_init)
     
     sum_sq_err_a = 0.0
     sum_sq_err_b = 0.0
@@ -88,6 +93,11 @@ function cost_function(params)
         k3 = pendulum_dynamics(u .+ (delta_t/2) .* k2, m1, m2)
         k4 = pendulum_dynamics(u .+ delta_t .* k3, m1, m2)
         u = u .+ (delta_t/6) .* (k1 .+ 2 .* k2 .+ 2 .* k3 .+ k4)
+
+        # Stability check to avoid DomainError
+        if !all(isfinite, u) || any(abs.(x) > 1e5 for x in u)
+            return 1e9
+        end
     end
         
     count = track_idx - 1
@@ -98,29 +108,25 @@ end
 #region Optimisation
 
 # [m1, m2, theta1_init, theta2_init, theta1p, theta2p]
-initial_guess = [0.0306, 0.003592, 3.08977, 3.35064, 1.09264, 0.082822] # valeur trouvée avant avec petit rmse
-lower = [0.005, 0.0005, pi - 0.1, pi - 0.1, 0, 0]
-upper = [0.04, 0.01, pi + 0.5, pi + 0.5, 1.5, 1.0]
+initial_guess = [0.0306, 0.003592, 0, 0.2] # valeur trouvée avant avec petit rmse
+lower = [0.005, 0.001, 0, 0]
+upper = [0.06, 0.01, 0.5, 1]
 
-println("Optimisation (LBFGS)...")
+println("Optimisation...")
 
-result = optimize(cost_function, lower, upper, initial_guess, Fminbox(LBFGS()), 
-                  Optim.Options(show_trace=true, iterations=1000, show_every=20), autodiff=:forward)
+result = optimize(cost_function, lower, upper, ParticleSwarm(n_particles=10000), 
+                  Optim.Options(show_trace=true, iterations=100, show_every=2))
 
 best = Optim.minimizer(result)
 
 println("\n--- RÉSULTATS ---")
 println("Masse 1: ", round(best[1], digits=5))
 println("Masse 2: ", round(best[2], digits=5))
-println("Theta 1: ", round(best[3], digits=5))
-println("Theta 2: ", round(best[4], digits=5))
-println("Theta 1p: ", round(best[5], digits=5))
-println("Theta 2p: ", round(best[6], digits=5))
+println("Theta 1p: ", round(best[3], digits=5))
+println("Theta 2p: ", round(best[4], digits=5))
 println("RMSE final: ", round(Optim.minimum(result), digits=5))
 
 #endregion
 
-for i in 1:6
-    best[i] = round(best[i], digits=5)
-end
-load_double_pendulum_mp4(best[1], best[2], best[3], best[4], best[5], best[6])
+best = round.(best, digits=5)
+load_double_pendulum_mp4(best[1], best[2], 3.1728, 3.225, best[3], best[4])
