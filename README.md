@@ -1,24 +1,55 @@
-## Calcul erreur Runge-Kutta
-**RK4 error (dt = 0.005):**
-0.04839186301086329 %
+# Double Pendulum
 
-**RK4 error (dt = 0.01):**
-1.1230357354165932 %
+This project simulates the dynamics of a double pendulum using the Runge-Kutta 4 (RK4) integration method and optimizes the system parameters (masses, initial velocities) to match experimental tracking data.
 
-**RK4 error (dt = 0.001):**
-1.848640525281553e-5 %
+## Files Structure
 
-## Idée
-- Utiliser Python pour avoir la positions des pendules.
-  - OpenCV
-  - masquage des couleurs avec couleur rouge pendule comme base
-- Rapprochement avec Gradient descent (descente de gradient) -> travail avec paramètres
+- **`double_pendulum.jl`**: Core simulation logic. Contains the equations of motion, RK4 integrator, and visualization functions to generate MP4 animations and position plots.
+- **`optimisation_pendule.jl`**: Optimization script. Uses the `Optim.jl` package (Particle Swarm Optimization followed by Nelder-Mead) to find the best-fitting parameters (`m1`, `m2`, `theta1_dot`, `theta2_dot`) that minimize the error (RMSE) between the simulation and real-world data.
+- **`*.csv`**: Tracked position data files (e.g., `mass_a_200.csv`, `mass_b_200.csv`) used as ground truth for optimization. Files created by using [Tracker Online](https://opensourcephysics.github.io/tracker-online/index_ff.html) and selecting each position by hand.
 
-## Changé
-- Tracker App pour avoir les 70 premières frames.
-- Trouver par rapport à ces 70 frames d'abord.
-  - Check RMSE (avec premières valeurs mises au bol (0.022 et 0.0018) j'ai trouvé RMSE total de ~0.05)
-  un peu de changement à la main et arrivé sur RMSE de 0.015479 (0.020283 et 0.002083)
-- un peu de recherches et trouvé manière d'optimiser avec packages "LsqFit" ou "Optim".
-  - utilisé Optim car bonne doc https://julianlsolvers.github.io/Optim.jl/stable/user/minimization/ avec descente de gradient (indice du prof)
-  - nouveau fichier -> optimisation_pendule.jl
+## Dependencies
+
+The project is written in Julia. You will need the following packages:
+
+```julia
+using DataFrames
+using CSV
+using Plots
+using LinearAlgebra
+using Statistics
+using Optim
+using LineSearches
+```
+
+You can install them via the Julia REPL package mode:
+```julia
+] add DataFrames CSV Plots Optim LineSearches
+```
+
+## Usage
+
+To run the parameter optimization and generate the comparison visualization:
+
+```bash
+julia optimisation_pendule.jl
+```
+
+This script will:
+1.  Load the tracking data (`mass_a_200.csv`, `mass_b_200.csv`).
+2.  Run a global optimization (Particle Swarm) followed by a local refinement (Nelder-Mead) to estimate masses and initial angular velocities.
+3.  Output the best parameters found.
+4.  Generate an animation (`double_pendulum.mp4`) and plots (`masse_a_x.png`, `masse_b_x.png`, etc.) comparing the simulation with the experimental data.
+
+Or else you can run :
+```bash
+julia double_pendulum.jl
+```
+
+Which will simulate the double pendulum and create a video with the specified parameters.
+
+## Methodology
+
+- **Dynamics**: Solved using Lagrangian mechanics and Cramer's rule for the system of linear equations for accelerations.
+- **Integration**: Fixed-step Runge-Kutta 4th order (RK4).
+- **Optimization**: The cost function calculates the Root Mean Square Error (RMSE) between the simulated coordinates and the tracked coordinates from the CSV files.
