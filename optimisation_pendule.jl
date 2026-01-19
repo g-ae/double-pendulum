@@ -23,6 +23,10 @@ const VIDEO_DELTA_T = 0.01
 const CALC_DELTA = trunc(Int, VIDEO_DELTA_T / delta_t)
 const DIFF = 10 * CALC_DELTA
 
+# Valeurs par défaut
+const theta1 = 3.1728
+const theta2 = 3.225
+
 #region Fonctions
 function RMSE(arrVect1, arrVect2)
     return sqrt(mean(norm.(arrVect1 .- arrVect2).^2))
@@ -58,14 +62,15 @@ end
 
 function cost_function(params)
     # params contient [m1, m2, theta1_debut, theta2_debut, theta1p_debut, theta2p_debut]
-    m1, m2, theta1p_init, theta2p_init = params
+    m1, m2, theta1p, theta2p = params
 
-    if m1 <= 0 || m2 <= 0 || theta1p_init <= 0 || theta2p_init <= 0
+    if m1 <= 0 || m2 <= 0 #|| theta1p_init <= 0 || theta2p_init <= 0
         return Inf
     end
     
     # angles de base fixes
-    u = (3.1728, 3.225, theta1p_init, theta2p_init)
+    u = (theta1, theta2, theta1p, theta2p)
+    # u = (theta1, theta2, theta1p, theta2p)
     
     sum_sq_err_a = 0.0
     sum_sq_err_b = 0.0
@@ -101,25 +106,36 @@ function cost_function(params)
     end
         
     count = track_idx - 1
-    return sqrt(sum_sq_err_a / count) + sqrt(sum_sq_err_b / count)
+    # priorité sur la masse b car c'est celle qui fait le plus de différence le plus facilement
+    return sqrt(sum_sq_err_a / count) + 1.2 * sqrt(sum_sq_err_b / count)
 end
 #endregion
 
 #region Optimisation
 
 # [m1, m2, theta1_init, theta2_init, theta1p, theta2p]
-initial_guess = [0.0306, 0.003592, 0, 0.2] # valeur trouvée avant avec petit rmse
+initial_guess = [0.0306, 0.003592, 0, 0.2]
 lower = [0.005, 0.001, 0, 0]
-upper = [0.06, 0.01, 0.5, 1]
+upper = [0.06, 0.01, 1, 3]
 
 println("Optimisation...")
 
-result = optimize(cost_function, lower, upper, ParticleSwarm(n_particles=10000), 
-                  Optim.Options(show_trace=true, iterations=100, show_every=2))
+result = optimize(cost_function, lower, upper, ParticleSwarm(n_particles=5000), 
+                  Optim.Options(show_trace=true, iterations=500, show_every=50))
 
 best = Optim.minimizer(result)
 
-println("\n--- RÉSULTATS ---")
+println("\n--- RÉSULTATS Swarm ---")
+println("Masse 1: ", round(best[1], digits=5))
+println("Masse 2: ", round(best[2], digits=5))
+println("Theta 1p: ", round(best[3], digits=5))
+println("Theta 2p: ", round(best[4], digits=5))
+println("RMSE final: ", round(Optim.minimum(result), digits=5))
+
+result = optimize(cost_function, best, NelderMead(), Optim.Options(show_trace=true, iterations=1000, show_every=20))
+best = Optim.minimizer(result)
+
+println("\n--- RÉSULTATS NelderMead ---")
 println("Masse 1: ", round(best[1], digits=5))
 println("Masse 2: ", round(best[2], digits=5))
 println("Theta 1p: ", round(best[3], digits=5))
@@ -129,4 +145,4 @@ println("RMSE final: ", round(Optim.minimum(result), digits=5))
 #endregion
 
 best = round.(best, digits=5)
-load_double_pendulum_mp4(best[1], best[2], 3.1728, 3.225, best[3], best[4])
+load_double_pendulum_mp4(best[1], best[2], theta1, theta2, best[3], best[4])
