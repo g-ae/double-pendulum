@@ -70,7 +70,6 @@ function cost_function(params)
     
     # angles de base fixes
     u = (theta1, theta2, theta1p, theta2p)
-    # u = (theta1, theta2, theta1p, theta2p)
     
     sum_sq_err_a = 0.0
     sum_sq_err_b = 0.0
@@ -120,8 +119,8 @@ upper = [0.06, 0.01, 1, 3]
 
 println("Optimisation...")
 
-result = optimize(cost_function, lower, upper, ParticleSwarm(n_particles=5000), 
-                  Optim.Options(show_trace=true, iterations=500, show_every=50))
+result = optimize(cost_function, lower, upper, ParticleSwarm(n_particles=2000), 
+                  Optim.Options(show_trace=true, iterations=100, show_every=20))
 
 best = Optim.minimizer(result)
 
@@ -144,5 +143,5 @@ println("RMSE final: ", round(Optim.minimum(result), digits=5))
 
 #endregion
 
-best = round.(best, digits=5)
+# best = round.(best, digits=5)
 load_double_pendulum_mp4(best[1], best[2], theta1, theta2, best[3], best[4])
