@@ -137,21 +137,24 @@ function save_position_images(position_data, starting_u)
     dfa_y_affichage = dfa.y[1:frame_finale]
 
     # Plot de position masse A
-    Plots.plot(1:frame_finale, x1_affichage, label="Calculated", xlabel="frame", ylabel="position X", title="MASSE A, m1: $m1 kg, m2: $m2 kg")
+    m1r = round(m1, digits=5)
+    m2r = round(m2, digits=5)
+    Plots.plot(1:frame_finale, x1_affichage, label="Calculated", xlabel="frame", ylabel="position X", title="MASSE A, m1: $m1r kg, m2: $m2r kg")
     Plots.plot!(1:frame_finale, dfa_x_affichage, label="Tracked A")
     savefig("masse_a_x.png")
 
-    Plots.plot(1:frame_finale, y1_affichage, label="Calculated", xlabel="frame", ylabel="position Y", title="MASSE A, $starting_u")
+    ur = round.(starting_u, digits=5)
+    Plots.plot(1:frame_finale, y1_affichage, label="Calculated", xlabel="frame", ylabel="position Y", title="MASSE A, $ur")
     Plots.plot!(1:frame_finale, dfa_y_affichage, label="Tracked A")
 
     savefig("masse_a_y.png")
 
     # Plot de position masse B
-    Plots.plot(1:frame_finale, x2[1:CALC_DELTA:frame_finale*CALC_DELTA + 1 - CALC_DELTA], label="Calculated", xlabel="frame", ylabel="position X", title="MASSE B, m1: $m1 kg, m2: $m2 kg")
+    Plots.plot(1:frame_finale, x2[1:CALC_DELTA:frame_finale*CALC_DELTA + 1 - CALC_DELTA], label="Calculated", xlabel="frame", ylabel="position X", title="MASSE B, m1: $m1r kg, m2: $m2r kg")
     Plots.plot!(1:frame_finale, dfb.x[1:frame_finale], label="Tracked B")
     savefig("masse_b_x.png")
 
-    Plots.plot(1:frame_finale, y2[1:CALC_DELTA:frame_finale*CALC_DELTA + 1 - CALC_DELTA], label="Calculated", xlabel="frame", ylabel="position Y", title="MASSE B, $starting_u")
+    Plots.plot(1:frame_finale, y2[1:CALC_DELTA:frame_finale*CALC_DELTA + 1 - CALC_DELTA], label="Calculated", xlabel="frame", ylabel="position Y", title="MASSE B, $ur")
     Plots.plot!(1:frame_finale, dfb.y[1:frame_finale], label="Tracked B")
     savefig("masse_b_y.png")
 end
