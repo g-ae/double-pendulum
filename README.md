@@ -10,43 +10,40 @@ This project simulates the dynamics of a double pendulum using the Runge-Kutta 4
 
 ## Dependencies
 
+### Julia Packages
 The project is written in Julia. You will need the following packages:
-
 ```julia
-using DataFrames
-using CSV
-using Plots
-using LinearAlgebra
-using Statistics
-using Optim
-using LineSearches
+using DataFrames, CSV, Plots, LinearAlgebra, Statistics, Optim, LineSearches
 ```
-
-You can install them via the Julia REPL package mode:
+Install them via the Julia REPL:
 ```julia
 ] add DataFrames CSV Plots Optim LineSearches
 ```
+
+### System Tools
+- **`make`**: To automate the execution workflow.
+- **`ImageMagick`**: Required for the `montage` command used in the Makefile to combine plots.
 
 ## Usage
 
 To run the parameter optimization and generate the comparison visualization:
 
 ```bash
-julia optimisation_pendule.jl
+make
 ```
 
 This script will:
-1.  Load the tracking data (`mass_a_200.csv`, `mass_b_200.csv`).
-2.  Run a global optimization (Particle Swarm) followed by a local refinement (Nelder-Mead) to estimate masses and initial angular velocities.
-3.  Output the best parameters found.
-4.  Generate an animation (`double_pendulum.mp4`) and plots (`masse_a_x.png`, `masse_b_x.png`, etc.) comparing the simulation with the experimental data.
+1.  Launch `optimisation_pendule.jl`
+2.  Which will load the tracking data (`mass_a_200.csv`, `mass_b_200.csv`).
+3.  Run a global optimization (Particle Swarm) followed by a local refinement (Nelder-Mead) to estimate masses and initial angular velocities.
+4.  Output the best parameters found.
+5.  Generate an animation (`double_pendulum.mp4`) and plots (`masse_a_x.png`, `masse_b_x.png`, etc.) comparing the simulation with the experimental data.
+6.  Combine all simulation data plots (`masse_*_*.png`) into one single `resultat_combine.png` file.
 
 Or else you can run :
 ```bash
 julia double_pendulum.jl
 ```
-
-Which will simulate the double pendulum and create a video with the specified parameters.
 
 ## Methodology
 
