@@ -53,31 +53,32 @@ julia double_pendulum.jl
 
 ### Lagrangian Mechanics
 Taken the Lagrangian equations from [Wikipedia](https://fr.wikipedia.org/wiki/Pendule_double) and applied the formulas
-$L=T-V$
-$T={\frac {1}{2}}m_{1}l_{1}^{2}{\dot {\theta }}_{1}^{2}+{\frac {1}{2}}m_{2}[l_{1}^{2}{\dot {\theta }}_{1}^{2}+l_{2}^{2}{\dot {\theta }}_{2}^{2}+2l_{1}l_{2}{\dot {\theta }}_{1}{\dot {\theta }}_{2}\cos(\theta _{1}-\theta _{2})]$
-$ V=-(m_{1}+m_{2})gl_{1}\cos(\theta _{1})-m_{2}gl_{2}\cos(\theta _{2})$
+
+$L=T-V$ \
+$T = \frac{1}{2}m_1 l_1^2\dot{\theta}_1^2+\frac {1}{2}m_2[l_1^2\dot{\theta}_1^2+l_2^2\dot{\theta}_2^2+2l_1l_2\dot {\theta}_1\dot{\theta}_2\cos(\theta_1-\theta_2)]$ \
+$V=-(m_1+m_2)gl_1\cos(\theta_1)-m_2gl_2\cos(\theta_2)$
 
 Obtained equations:
-$$
-{\begin{array}{l}(m_{1}+m_{2})l_{1}{\ddot {\theta }}_{1}+m_{2}l_{2}{\ddot {\theta }}_{2}\cos(\theta _{1}-\theta _{2})+m_{2}l_{2}{\dot {\theta }}_{2}^{2}\sin(\theta _{1}-\theta _{2})+(m_{1}+m_{2})g\sin(\theta _{1})=0\\l_{1}{\ddot {\theta }}_{1}\cos(\theta _{1}-\theta _{2})+l_{2}{\ddot {\theta }}_{2}-l_{1}{\dot {\theta }}_{1}^{2}\sin(\theta _{1}-\theta _{2})+g\sin(\theta _{2})=0\end{array}}
-$$
+
+$l(m_1 + m_2)l_1\ddot{\theta}_1+m_2 l_2\ddot {\theta}_2\cos(\theta_1-\theta_2)+m_2l_2\dot {\theta}_2^2\sin(\theta_1-\theta_2)+(m_1+m_2)g\sin(\theta_1)=0$ \
+$l_1\ddot{\theta}_1\cos(\theta_1-\theta_2)+l_2\ddot {\theta}_2-l_1\dot{\theta}_1^2\sin(\theta_1-\theta_2) + g \sin(\theta_2) = 0$
 
 Final equations (to solve for $\ddot{\theta}_1$ and $\ddot{\theta}_2$):
 
-$M_{11} = (m_1 + m_2) * l_1$
-$M_{12} = m_2 * l_2 * cos(\theta_1 - \theta_2)$
+$M_{11} = (m_1 + m_2) * l_1$ \
+$M_{12} = m_2 * l_2 * cos(\theta_1 - \theta_2)$ \
 $R_1  = -m_2 * l_2 * \dot{\theta}_2^2 * sin(\theta_1 - \theta_2) - (m_1 + m_2) * g * sin(\theta_1)$
 
-$M_{21} = l_1 * cos(\theta_1 - \theta_2)$
-$M_{22} = l_2$
+$M_{21} = l_1 * cos(\theta_1 - \theta_2)$ \
+$M_{22} = l_2$ \
 $R_2  = l_1 * \dot{\theta_1}^2 * sin(\theta_1 - \theta_2) - g * sin(\theta_2)$
 
 ### Runge Kutta
 The system state is defined by the vector $u = [\theta_1, \theta_2, \dot{\theta}_1, \dot{\theta}_2]$. To evolve this state over time, we use the 4th-order Runge-Kutta method (RK4) with a fixed time step $\Delta t$:
 
-$k_1 = f(u_n)$
-$k_2 = f(u_n + \frac{\Delta t}{2} k_1)$
-$k_3 = f(u_n + \frac{\Delta t}{2} k_2)$
+$k_1 = f(u_n)$ \
+$k_2 = f(u_n + \frac{\Delta t}{2} k_1)$ \
+$k_3 = f(u_n + \frac{\Delta t}{2} k_2)$ \
 $k_4 = f(u_n + \Delta t k_3)$
 
 $u_{n+1} = u_n + \frac{\Delta t}{6} (k_1 + 2k_2 + 2k_3 + k_4)$
