@@ -221,3 +221,7 @@ function load_double_pendulum_mp4(masse1, masse2, t1, t2, t1p, t2p)
     #calc_energie(energie_data)
     println("Calculated RMSE : ", calculate_RMSE(pos_data))
 end
+
+if abspath(PROGRAM_FILE) == @__FILE__
+    load_double_pendulum_mp4(0.0306, 0.003592, 3.1728, 3.225, 0.0, 0.0)
+end
