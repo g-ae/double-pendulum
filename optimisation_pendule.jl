@@ -1,4 +1,4 @@
-using DataFrames, CSV, LinearAlgebra, Statistics, Optim, LineSearches
+using DataFrames, CSV, LinearAlgebra, Statistics, Optim
 
 include("double_pendulum.jl")
 
