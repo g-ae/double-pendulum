@@ -1,4 +1,4 @@
-using DataFrames, CSV, Plots
+using DataFrames, CSV, Plots, LinearAlgebra, Statistics
 
 global m1 = 0.1
 global m2 = 0.1
@@ -156,13 +156,68 @@ function save_position_images(position_data, starting_u)
     savefig("masse_b_y.png")
 end
 
+function calculate_RMSE(position_data)
+    x1, y1, x2, y2 = position_data
+
+    # These constants are defined in the calling script (optimisation_pendule.jl)
+    # If running this file standalone, they would need to be defined here.
+    frame_finale = length(dfa.x)
+    VIDEO_DELTA_T = 0.01
+    CALC_DELTA = trunc(Int, VIDEO_DELTA_T / delta_t)
+
+    # Downsample calculated data to match tracked data's framerate
+    num_points = min(frame_finale, floor(Int, length(x1) / CALC_DELTA))
+    
+    indices = 1:CALC_DELTA:(num_points * CALC_DELTA)
+    
+    x1_calc = x1[indices]
+    y1_calc = y1[indices]
+    x2_calc = x2[indices]
+    y2_calc = y2[indices]
+
+    # Create arrays of vectors for comparison
+    traj_calc_a = [[x, y] for (x, y) in zip(x1_calc, y1_calc)]
+    traj_track_a = [[x, y] for (x, y) in zip(dfa.x[1:num_points], dfa.y[1:num_points])]
+    
+    traj_calc_b = [[x, y] for (x, y) in zip(x2_calc, y2_calc)]
+    traj_track_b = [[x, y] for (x, y) in zip(dfb.x[1:num_points], dfb.y[1:num_points])]
+
+    # Internal RMSE helper
+    _rmse(v1, v2) = sqrt(mean(norm.(v1 .- v2) .^ 2))
+
+    rmse_a = _rmse(traj_calc_a, traj_track_a)
+    rmse_b = _rmse(traj_calc_b, traj_track_b)
+
+    println("RMSE Masse A: ", round(rmse_a, digits=5))
+    println("RMSE Masse B: ", round(rmse_b, digits=5))
+
+    return rmse_a + rmse_b
+end
+
+function calc_energie(energie_data)
+    k,p,m = energie_data
+
+    println("Génération de l'image des énergies...")
+    Plots.plot(1:iterations, k, label="Ec", ylabel="Energie", xlabel="Iterations ($(round(delta_t * iterations))/frame)")
+    Plots.plot!(1:iterations, p, label="Ep")
+    Plots.plot!(1:iterations, m, label="Em")
+    
+    savefig("cinetique.png")
+    
+    println("Énergie totale au point 1: ", m[1])
+    println("Énergie totale à la fin: ", m[end])
+    println("Équivaut à une perte de ", 100 - m[end] / m[1] * 100, " %")
+end
+
 function load_double_pendulum_mp4(masse1, masse2, t1, t2, t1p, t2p)
     println("\n-- Loading double pendulum data to mp4 --")
     global m1 = masse1
     global m2 = masse2
     starting_u = [t1,t2,t1p,t2p]
     global u = [t1,t2,t1p,t2p]
-    pos_data = rk4()[1]
+    pos_data, energie_data = rk4()
     save_mp4(pos_data)
     save_position_images(pos_data, starting_u)
+    #calc_energie(energie_data)
+    println("Calculated RMSE : ", calculate_RMSE(pos_data))
 end
